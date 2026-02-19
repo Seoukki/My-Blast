@@ -526,4 +526,860 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.
+            transition: all 0.2s;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .sound-btn:active {
+            transform: scale(0.92);
+        }
+
+        .sound-btn.muted {
+            opacity: 0.4;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">
+            <span class="logo-seonn">SEONN</span>
+            <div class="logo-divider"></div>
+            <span class="logo-blast">BLAST</span>
+        </div>
+    </div>
+
+    <div class="game-container">
+        <div class="top-bar">
+            <button class="icon-btn" onclick="game.restart()" aria-label="Restart">🔄</button>
+            <div class="score-display">
+                <div class="current-score" id="score">0</div>
+                <div class="best-score">
+                    <span>👑</span>
+                    <span id="best">0</span>
+                </div>
+            </div>
+            <button class="icon-btn" onclick="game.hint()" aria-label="Hint">💡</button>
+        </div>
+
+        <div class="grid-wrapper">
+            <div class="grid" id="grid"></div>
+        </div>
+
+        <div class="pieces-wrapper">
+            <div class="pieces-label">DRAG BLOCKS TO GRID</div>
+            <div class="pieces-container" id="pieces">
+                <div class="piece-slot" data-index="0"></div>
+                <div class="piece-slot" data-index="1"></div>
+                <div class="piece-slot" data-index="2"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="gameOver">
+        <div class="modal-content">
+            <div class="modal-title">DEFEAT</div>
+            <div class="modal-subtitle">No moves available</div>
+            <div class="final-score-box">
+                <div class="final-score-label">Final Score</div>
+                <div class="final-score" id="finalScore">0</div>
+            </div>
+            <button class="btn-play" onclick="game.restart()">Try Again</button>
+        </div>
+    </div>
+
+    <button class="sound-btn" id="soundBtn" onclick="game.toggleSound()" aria-label="Toggle Sound">🔊</button>
+
+    <script>
+        class SeonnBlast {
+            constructor() {
+                this.size = 8;
+                this.grid = Array(this.size).fill(null).map(() => Array(this.size).fill(null));
+                this.score = 0;
+                this.best = parseInt(localStorage.getItem('seonnBlastBest')) || 0;
+                this.pieces = [];
+                this.colors = ['#ef4444', '#eab308', '#22c55e', '#a855f7', '#3b82f6'];
+                this.shapes = [
+                    [[1]], [[1,1]], [[1],[1]], [[1,1,1]], [[1],[1],[1]],
+                    [[1,1],[1,1]], [[1,1,1],[0,1,0]], [[1,0],[1,1]],
+                    [[0,1],[1,1]], [[1,1,0],[0,1,1]], [[0,1,1],[1,1,0]],
+                    [[1,1,1,1]], [[1],[1],[1],[1]]
+                ];
+                this.singleLineTexts = ['NICE!', 'COOL!', 'SWEET!', 'GOOD!', 'GREAT!'];
+                this.dragged = null;
+                this.previewCells = [];
+                this.audioEnabled = true;
+                this.audioContext = null;
+                this.masterGain = null;
+                this.audioInitialized = false;
+                this.audioUnlocked = false;
+                this.lastDragTime = 0;
+                this.dragThrottle = 8; // 120fps untuk lebih smooth
+                this.gridRect = null;
+                this.rafId = null;
+                
+                this.init();
+            }
+
+            // FIX iOS: Auto unlock audio on first interaction
+            initAudio() {
+                if (this.audioInitialized) return;
+                try {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (!AudioContext) return;
+                    
+                    this.audioContext = new AudioContext();
+                    this.masterGain = this.audioContext.createGain();
+                    this.masterGain.gain.value = 1.0;
+                    
+                    const compressor = this.audioContext.createDynamicsCompressor();
+                    compressor.threshold.value = -10;
+                    compressor.knee.value = 20;
+                    compressor.ratio.value = 6;
+                    compressor.attack.value = 0.001;
+                    compressor.release.value = 0.1;
+                    
+                    this.masterGain.connect(compressor);
+                    compressor.connect(this.audioContext.destination);
+                    
+                    this.audioInitialized = true;
+                    
+                    // Auto-resume jika suspended (iOS)
+                    if (this.audioContext.state === 'suspended') {
+                        this.audioContext.resume();
+                    }
+                } catch(e) {
+                    console.log('Audio init error:', e);
+                }
+            }
+
+            unlockAudio() {
+                if (!this.audioContext) {
+                    this.initAudio();
+                } else if (this.audioContext.state === 'suspended') {
+                    this.audioContext.resume();
+                }
+                this.audioUnlocked = true;
+            }
+
+            playSound(type) {
+                if (!this.audioEnabled || !this.audioContext) return;
+                
+                // FIX: Auto unlock jika belum
+                if (!this.audioUnlocked) {
+                    this.unlockAudio();
+                }
+                
+                const now = Date.now();
+                if (this.lastSoundTime && now - this.lastSoundTime < 30 && type === this.lastSoundType) return;
+                this.lastSoundTime = now;
+                this.lastSoundType = type;
+
+                try {
+                    switch(type) {
+                        case 'place': this.playPlaceSound(); break;
+                        case 'clear': this.playClearSound(); break;
+                        case 'combo': this.playComboSound(); break;
+                        case 'defeat': this.playDefeatSound(); break;
+                        case 'drag': this.playDragSound(); break;
+                    }
+                } catch(e) {
+                    console.log('Sound error:', e);
+                }
+            }
+
+            playPlaceSound() {
+                const t = this.audioContext.currentTime;
+                const osc1 = this.audioContext.createOscillator();
+                const gain1 = this.audioContext.createGain();
+                osc1.connect(gain1);
+                gain1.connect(this.masterGain);
+                osc1.frequency.setValueAtTime(500, t);
+                osc1.frequency.exponentialRampToValueAtTime(100, t + 0.1);
+                gain1.gain.setValueAtTime(0.6, t);
+                gain1.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+                osc1.start(t);
+                osc1.stop(t + 0.1);
+                
+                const osc2 = this.audioContext.createOscillator();
+                const gain2 = this.audioContext.createGain();
+                osc2.connect(gain2);
+                gain2.connect(this.masterGain);
+                osc2.type = 'sine';
+                osc2.frequency.setValueAtTime(1500, t);
+                osc2.frequency.exponentialRampToValueAtTime(750, t + 0.08);
+                gain2.gain.setValueAtTime(0.4, t);
+                gain2.gain.exponentialRampToValueAtTime(0.01, t + 0.08);
+                osc2.start(t);
+                osc2.stop(t + 0.08);
+            }
+
+            playClearSound() {
+                const t = this.audioContext.currentTime;
+                const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51];
+                notes.forEach((freq, i) => {
+                    const osc = this.audioContext.createOscillator();
+                    const gain = this.audioContext.createGain();
+                    osc.connect(gain);
+                    gain.connect(this.masterGain);
+                    osc.type = i % 2 === 0 ? 'sine' : 'triangle';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.4, t + i * 0.04);
+                    gain.gain.exponentialRampToValueAtTime(0.01, t + i * 0.04 + 0.15);
+                    osc.start(t + i * 0.04);
+                    osc.stop(t + i * 0.04 + 0.15);
+                });
+            }
+
+            playComboSound() {
+                const t = this.audioContext.currentTime;
+                const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51];
+                notes.forEach((freq, i) => {
+                    const osc = this.audioContext.createOscillator();
+                    const gain = this.audioContext.createGain();
+                    osc.connect(gain);
+                    gain.connect(this.masterGain);
+                    osc.type = 'sawtooth';
+                    osc.frequency.value = freq;
+                    
+                    const filter = this.audioContext.createBiquadFilter();
+                    filter.type = 'lowpass';
+                    filter.frequency.value = 2500;
+                    osc.disconnect();
+                    osc.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(this.masterGain);
+                    
+                    gain.gain.setValueAtTime(0.3, t + i * 0.03);
+                    gain.gain.exponentialRampToValueAtTime(0.01, t + i * 0.03 + 0.3);
+                    osc.start(t + i * 0.03);
+                    osc.stop(t + i * 0.03 + 0.3);
+                });
+            }
+
+            playDefeatSound() {
+                const t = this.audioContext.currentTime;
+                const osc = this.audioContext.createOscillator();
+                const gain = this.audioContext.createGain();
+                osc.connect(gain);
+                gain.connect(this.masterGain);
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(300, t);
+                osc.frequency.exponentialRampToValueAtTime(50, t + 0.8);
+                gain.gain.setValueAtTime(0.5, t);
+                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.8);
+                osc.start(t);
+                osc.stop(t + 0.8);
+            }
+
+            playDragSound() {
+                const t = this.audioContext.currentTime;
+                const osc = this.audioContext.createOscillator();
+                const gain = this.audioContext.createGain();
+                osc.connect(gain);
+                gain.connect(this.masterGain);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, t);
+                osc.frequency.exponentialRampToValueAtTime(400, t + 0.05);
+                gain.gain.setValueAtTime(0.2, t);
+                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
+                osc.start(t);
+                osc.stop(t + 0.05);
+            }
+
+            // HAPTIC FEEDBACK
+            triggerHaptic(type = 'light') {
+                if (!window.navigator || !window.navigator.vibrate) return;
+                
+                try {
+                    switch(type) {
+                        case 'light':
+                            navigator.vibrate(10);
+                            break;
+                        case 'medium':
+                            navigator.vibrate(20);
+                            break;
+                        case 'heavy':
+                            navigator.vibrate([30, 50, 30]);
+                            break;
+                        case 'clear':
+                            // Pattern untuk garis yang hilang
+                            navigator.vibrate([15, 30, 15, 30, 15]);
+                            break;
+                    }
+                } catch(e) {
+                    // Ignore haptic errors
+                }
+            }
+
+            speakCombo(text) {
+                if (!this.audioEnabled || !('speechSynthesis' in window)) return;
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 1.2;
+                utterance.pitch = 1.0;
+                utterance.volume = 0.9;
+                const voices = window.speechSynthesis.getVoices();
+                if (voices.length > 0) {
+                    const preferredVoice = voices.find(v => v.lang === 'en-US') || voices[0];
+                    utterance.voice = preferredVoice;
+                }
+                window.speechSynthesis.speak(utterance);
+            }
+
+            toggleSound() {
+                this.audioEnabled = !this.audioEnabled;
+                const btn = document.getElementById('soundBtn');
+                btn.textContent = this.audioEnabled ? '🔊' : '🔇';
+                btn.classList.toggle('muted', !this.audioEnabled);
+                if (!this.audioEnabled) {
+                    window.speechSynthesis.cancel();
+                } else {
+                    this.unlockAudio();
+                    this.triggerHaptic('medium');
+                }
+            }
+
+            init() {
+                document.getElementById('best').textContent = this.best;
+                this.createGrid();
+                this.generatePieces();
+                
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.getVoices();
+                }
+                
+                // FIX iOS: Global interaction handler untuk unlock audio
+                const unlockHandler = (e) => {
+                    this.unlockAudio();
+                    this.triggerHaptic('light');
+                    // Remove setelah first interaction
+                    document.removeEventListener('touchstart', unlockHandler, { capture: true });
+                    document.removeEventListener('click', unlockHandler, { capture: true });
+                    document.removeEventListener('mousedown', unlockHandler, { capture: true });
+                };
+                
+                document.addEventListener('touchstart', unlockHandler, { capture: true, once: true });
+                document.addEventListener('click', unlockHandler, { capture: true, once: true });
+                document.addEventListener('mousedown', unlockHandler, { capture: true, once: true });
+                
+                window.addEventListener('resize', () => {
+                    this.updateGridRect();
+                });
+                this.updateGridRect();
+            }
+
+            updateGridRect() {
+                const gridEl = document.getElementById('grid');
+                if (gridEl) {
+                    this.gridRect = gridEl.getBoundingClientRect();
+                }
+            }
+
+            createGrid() {
+                const g = document.getElementById('grid');
+                g.innerHTML = '';
+                for (let i = 0; i < this.size; i++) {
+                    for (let j = 0; j < this.size; j++) {
+                        const c = document.createElement('div');
+                        c.className = 'cell';
+                        c.dataset.r = i;
+                        c.dataset.c = j;
+                        g.appendChild(c);
+                    }
+                }
+                this.updateGridRect();
+            }
+
+            generatePieces() {
+                while (this.pieces.length < 3) {
+                    const shape = this.shapes[Math.floor(Math.random() * this.shapes.length)];
+                    const color = this.colors[Math.floor(Math.random() * this.colors.length)];
+                    this.pieces.push({ shape, color });
+                }
+                this.renderPieces();
+            }
+
+            renderPieces() {
+                document.querySelectorAll('.piece-slot').forEach((slot, i) => {
+                    slot.innerHTML = '';
+                    if (this.pieces[i]) {
+                        const pieceEl = this.createPieceElement(this.pieces[i], i);
+                        slot.appendChild(pieceEl);
+                    }
+                });
+            }
+
+            createPieceElement(piece, index, isDrag = false) {
+                const el = document.createElement('div');
+                el.className = 'piece';
+                if (!isDrag) el.dataset.idx = index;
+                
+                const rows = piece.shape.length;
+                const cols = piece.shape[0].length;
+                el.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+                
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < cols; c++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'piece-cell';
+                        if (piece.shape[r][c]) {
+                            cell.style.backgroundColor = piece.color;
+                            if (!isDrag) {
+                                const shine = document.createElement('div');
+                                shine.className = 'shine';
+                                cell.appendChild(shine);
+                            }
+                        } else {
+                            cell.style.visibility = 'hidden';
+                        }
+                        el.appendChild(cell);
+                    }
+                }
+                
+                if (!isDrag) {
+                    const startDrag = (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        this.handleDragStart(e, index);
+                    };
+                    el.addEventListener('touchstart', startDrag, { passive: false, capture: true });
+                    el.addEventListener('mousedown', startDrag, { capture: true });
+                }
+                
+                return el;
+            }
+
+            handleDragStart(e, index) {
+                this.unlockAudio();
+                this.playSound('drag');
+                this.triggerHaptic('light');
+                
+                const touch = e.touches ? e.touches[0] : e;
+                const piece = this.pieces[index];
+                
+                const rect = e.currentTarget.getBoundingClientRect();
+                
+                const dragEl = this.createPieceElement(piece, index, true);
+                dragEl.classList.add('dragged-piece');
+                
+                // Posisi awal di tengah jari
+                const offsetX = (piece.shape[0].length * parseInt(getComputedStyle(document.documentElement).getPropertyValue('--piece-size'))) / 2;
+                const offsetY = (piece.shape.length * parseInt(getComputedStyle(document.documentElement).getPropertyValue('--piece-size'))) / 2;
+                
+                dragEl.style.left = (touch.clientX - offsetX) + 'px';
+                dragEl.style.top = (touch.clientY - offsetY) + 'px';
+                
+                document.body.appendChild(dragEl);
+                
+                const original = document.querySelector(`.piece[data-idx="${index}"]`);
+                if (original) original.classList.add('hidden');
+                
+                this.dragged = {
+                    el: dragEl,
+                    piece: piece,
+                    index: index,
+                    offsetX: offsetX,
+                    offsetY: offsetY
+                };
+                
+                // SMOOTH: Gunakan RAF untuk animation loop
+                this.dragX = touch.clientX;
+                this.dragY = touch.clientY;
+                this.isDragging = true;
+                
+                this.animateDrag();
+                
+                this.moveHandler = (ev) => this.handleDragMove(ev);
+                this.endHandler = (ev) => this.handleDragEnd(ev);
+                
+                document.addEventListener('touchmove', this.moveHandler, { passive: false, capture: true });
+                document.addEventListener('mousemove', this.moveHandler, { capture: true });
+                document.addEventListener('touchend', this.endHandler, { once: true, capture: true });
+                document.addEventListener('mouseup', this.endHandler, { once: true, capture: true });
+            }
+
+            animateDrag() {
+                if (!this.isDragging || !this.dragged) return;
+                
+                const x = this.dragX - this.dragged.offsetX;
+                const y = this.dragY - this.dragged.offsetY;
+                
+                // SMOOTH: Gunakan transform3d untuk hardware acceleration
+                this.dragged.el.style.transform = `translate3d(0, 0, 0)`;
+                this.dragged.el.style.left = x + 'px';
+                this.dragged.el.style.top = y + 'px';
+                
+                this.rafId = requestAnimationFrame(() => this.animateDrag());
+            }
+
+            handleDragMove(e) {
+                if (!this.dragged) return;
+                e.preventDefault();
+                
+                const touch = e.touches ? e.touches[0] : e;
+                this.dragX = touch.clientX;
+                this.dragY = touch.clientY;
+                
+                // Throttled preview update
+                const now = Date.now();
+                if (now - this.lastDragTime > this.dragThrottle) {
+                    this.lastDragTime = now;
+                    this.updatePreview(touch.clientX, touch.clientY);
+                }
+            }
+
+            updatePreview(x, y) {
+                this.clearPreview();
+                
+                if (!this.gridRect) this.updateGridRect();
+                const rect = this.gridRect;
+                
+                if (!rect || x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) return;
+                
+                const col = Math.floor((x - rect.left) / (rect.width / this.size));
+                const row = Math.floor((y - rect.top) / (rect.height / this.size));
+                
+                if (!this.canPlace(row, col, this.dragged.piece.shape)) return;
+                
+                for (let i = 0; i < this.dragged.piece.shape.length; i++) {
+                    for (let j = 0; j < this.dragged.piece.shape[i].length; j++) {
+                        if (!this.dragged.piece.shape[i][j]) continue;
+                        
+                        const cellRow = row + i;
+                        const cellCol = col + j;
+                        
+                        if (cellRow < 0 || cellRow >= this.size || cellCol < 0 || cellCol >= this.size) continue;
+                        if (this.grid[cellRow][cellCol]) continue;
+                        
+                        const cell = document.querySelector(`[data-r="${cellRow}"][data-c="${cellCol}"]`);
+                        if (cell) {
+                            cell.classList.add('preview');
+                            cell.style.backgroundColor = this.dragged.piece.color;
+                            cell.style.setProperty('--cell-color', this.dragged.piece.color);
+                            this.previewCells.push(cell);
+                        }
+                    }
+                }
+            }
+
+            clearPreview() {
+                this.previewCells.forEach(cell => {
+                    cell.classList.remove('preview');
+                    if (!cell.classList.contains('filled')) {
+                        cell.style.backgroundColor = '';
+                        cell.style.removeProperty('--cell-color');
+                    }
+                });
+                this.previewCells = [];
+            }
+
+            handleDragEnd(e) {
+                this.isDragging = false;
+                if (this.rafId) {
+                    cancelAnimationFrame(this.rafId);
+                    this.rafId = null;
+                }
+                
+                if (!this.dragged) return;
+                
+                document.removeEventListener('touchmove', this.moveHandler, { capture: true });
+                document.removeEventListener('mousemove', this.moveHandler, { capture: true });
+                
+                const touch = e.changedTouches ? e.changedTouches[0] : e;
+                
+                if (!this.gridRect) this.updateGridRect();
+                const rect = this.gridRect;
+                
+                let placed = false;
+                
+                if (rect && touch.clientX >= rect.left && touch.clientX <= rect.right && 
+                    touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+                    
+                    const col = Math.floor((touch.clientX - rect.left) / (rect.width / this.size));
+                    const row = Math.floor((touch.clientY - rect.top) / (rect.height / this.size));
+                    
+                    if (this.canPlace(row, col, this.dragged.piece.shape)) {
+                        this.placePiece(row, col, touch.clientX, touch.clientY);
+                        placed = true;
+                    }
+                }
+                
+                this.clearPreview();
+                this.dragged.el.remove();
+                
+                if (!placed) {
+                    const original = document.querySelector(`.piece[data-idx="${this.dragged.index}"]`);
+                    if (original) original.classList.remove('hidden');
+                }
+                
+                this.dragged = null;
+            }
+
+            canPlace(row, col, shape) {
+                for (let i = 0; i < shape.length; i++) {
+                    for (let j = 0; j < shape[i].length; j++) {
+                        if (!shape[i][j]) continue;
+                        const r = row + i, c = col + j;
+                        if (r < 0 || r >= this.size || c < 0 || c >= this.size) return false;
+                        if (this.grid[r][c]) return false;
+                    }
+                }
+                return true;
+            }
+
+            placePiece(row, col, x, y) {
+                const piece = this.dragged.piece;
+                
+                for (let i = 0; i < piece.shape.length; i++) {
+                    for (let j = 0; j < piece.shape[i].length; j++) {
+                        if (!piece.shape[i][j]) continue;
+                        
+                        const cellRow = row + i;
+                        const cellCol = col + j;
+                        
+                        this.grid[cellRow][cellCol] = piece.color;
+                        
+                        const cell = document.querySelector(`[data-r="${cellRow}"][data-c="${cellCol}"]`);
+                        if (cell) {
+                            cell.style.backgroundColor = piece.color;
+                            cell.style.setProperty('--cell-color', piece.color);
+                            cell.classList.add('filled');
+                        }
+                    }
+                }
+                
+                this.playSound('place');
+                this.triggerHaptic('medium');
+                
+                const cells = piece.shape.flat().filter(Boolean).length;
+                const points = cells * 10;
+                this.score += points;
+                this.updateScore();
+                
+                this.showScorePopup(points, x, y);
+                
+                this.pieces.splice(this.dragged.index, 1);
+                
+                if (this.pieces.length === 0) {
+                    setTimeout(() => this.generatePieces(), 150);
+                } else {
+                    this.renderPieces();
+                }
+                
+                setTimeout(() => {
+                    this.checkLines();
+                    setTimeout(() => this.checkGameOver(), 300);
+                }, 100);
+            }
+
+            showScorePopup(points, x, y) {
+                const el = document.createElement('div');
+                el.className = 'score-popup';
+                el.textContent = `+${points}`;
+                el.style.left = x + 'px';
+                el.style.top = y + 'px';
+                document.body.appendChild(el);
+                setTimeout(() => el.remove(), 1000);
+            }
+
+            updateScore() {
+                document.getElementById('score').textContent = this.score;
+                if (this.score > this.best) {
+                    this.best = this.score;
+                    localStorage.setItem('seonnBlastBest', this.best);
+                    document.getElementById('best').textContent = this.best;
+                }
+            }
+
+            checkLines() {
+                const rowsToClear = [];
+                const colsToClear = [];
+                
+                for (let i = 0; i < this.size; i++) {
+                    if (this.grid[i].every(cell => cell !== null)) rowsToClear.push(i);
+                }
+                for (let j = 0; j < this.size; j++) {
+                    if (this.grid.every(row => row[j] !== null)) colsToClear.push(j);
+                }
+                
+                if (rowsToClear.length === 0 && colsToClear.length === 0) return;
+                
+                const total = rowsToClear.length + colsToClear.length;
+                
+                // HAPTIC untuk garis yang hilang
+                this.triggerHaptic('clear');
+                
+                let text;
+                if (total === 1) text = this.singleLineTexts[Math.floor(Math.random() * this.singleLineTexts.length)];
+                else if (total === 2) text = 'GOOD!';
+                else if (total === 3) text = 'GREAT!';
+                else if (total === 4) text = 'EXCELLENT!';
+                else if (total === 5) text = 'AMAZING!';
+                else text = 'PERFECT!';
+                
+                this.showCombo(text);
+                
+                if (total >= 2) this.playSound('combo');
+                else this.playSound('clear');
+                
+                setTimeout(() => this.speakCombo(text), 100);
+                
+                const bonus = total > 1 ? total * 50 : 0;
+                this.score += total * 100 + bonus;
+                this.updateScore();
+                
+                const toClear = new Set();
+                rowsToClear.forEach(r => {
+                    for (let c = 0; c < this.size; c++) toClear.add(`${r},${c}`);
+                });
+                colsToClear.forEach(c => {
+                    for (let r = 0; r < this.size; r++) toClear.add(`${r},${c}`);
+                });
+                
+                toClear.forEach(key => {
+                    const [r, c] = key.split(',').map(Number);
+                    const cell = document.querySelector(`[data-r="${r}"][data-c="${c}"]`);
+                    if (cell) cell.classList.add('clearing');
+                });
+                
+                setTimeout(() => {
+                    toClear.forEach(key => {
+                        const [r, c] = key.split(',').map(Number);
+                        this.grid[r][c] = null;
+                        const cell = document.querySelector(`[data-r="${r}"][data-c="${c}"]`);
+                        if (cell) {
+                            cell.style.backgroundColor = '';
+                            cell.style.removeProperty('--cell-color');
+                            cell.classList.remove('filled', 'clearing');
+                        }
+                    });
+                }, 500);
+            }
+
+            showCombo(text) {
+                const el = document.createElement('div');
+                el.className = 'combo';
+                el.textContent = text;
+                const colors = {
+                    'NICE!': '#3b82f6', 'COOL!': '#06b6d4', 'SWEET!': '#ec4899', 
+                    'GOOD!': '#22c55e', 'GREAT!': '#eab308', 'EXCELLENT!': '#f97316', 
+                    'AMAZING!': '#a855f7', 'PERFECT!': '#ef4444'
+                };
+                el.style.color = colors[text] || '#3b82f6';
+                document.body.appendChild(el);
+                setTimeout(() => el.remove(), 1200);
+            }
+
+            checkGameOver() {
+                for (const piece of this.pieces) {
+                    for (let r = 0; r < this.size; r++) {
+                        for (let c = 0; c < this.size; c++) {
+                            if (this.canPlace(r, c, piece.shape)) return;
+                        }
+                    }
+                }
+                
+                if (this.pieces.length > 0) {
+                    this.playSound('defeat');
+                    this.triggerHaptic('heavy');
+                    this.shatterAnimation(() => {
+                        document.getElementById('finalScore').textContent = this.score;
+                        document.getElementById('gameOver').classList.add('show');
+                    });
+                }
+            }
+
+            shatterAnimation(callback) {
+                const filledCells = document.querySelectorAll('.cell.filled');
+                if (filledCells.length === 0) {
+                    if (callback) callback();
+                    return;
+                }
+                
+                filledCells.forEach((cell, idx) => {
+                    setTimeout(() => {
+                        const rect = cell.getBoundingClientRect();
+                        const color = cell.style.backgroundColor;
+                        
+                        for (let i = 0; i < 4; i++) {
+                            const fragment = document.createElement('div');
+                            fragment.className = 'shatter-piece';
+                            fragment.style.left = rect.left + (i % 2) * rect.width / 2 + 'px';
+                            fragment.style.top = rect.top + Math.floor(i / 2) * rect.height / 2 + 'px';
+                            fragment.style.width = rect.width / 2 + 'px';
+                            fragment.style.height = rect.height / 2 + 'px';
+                            fragment.style.backgroundColor = color;
+                            fragment.style.setProperty('--tx', (Math.random() - 0.5) * 200 + 'px');
+                            fragment.style.setProperty('--ty', (Math.random() - 0.5) * 200 + 'px');
+                            fragment.style.setProperty('--rot', (Math.random() - 0.5) * 720 + 'deg');
+                            document.body.appendChild(fragment);
+                            setTimeout(() => fragment.remove(), 800);
+                        }
+                        cell.style.opacity = '0';
+                    }, idx * 10);
+                });
+                
+                setTimeout(() => {
+                    if (callback) callback();
+                }, filledCells.length * 10 + 300);
+            }
+
+            hint() {
+                this.unlockAudio();
+                this.triggerHaptic('light');
+                
+                for (const piece of this.pieces) {
+                    for (let r = 0; r < this.size; r++) {
+                        for (let c = 0; c < this.size; c++) {
+                            if (this.canPlace(r, c, piece.shape)) {
+                                for (let i = 0; i < piece.shape.length; i++) {
+                                    for (let j = 0; j < piece.shape[i].length; j++) {
+                                        if (piece.shape[i][j]) {
+                                            const cell = document.querySelector(`[data-r="${r + i}"][data-c="${c + j}"]`);
+                                            if (cell) {
+                                                cell.style.backgroundColor = piece.color;
+                                                cell.style.opacity = '0.5';
+                                                setTimeout(() => {
+                                                    if (!cell.classList.contains('filled')) {
+                                                        cell.style.backgroundColor = '';
+                                                        cell.style.opacity = '';
+                                                    }
+                                                }, 1000);
+                                            }
+                                        }
+                                    }
+                                }
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+
+            restart() {
+                this.unlockAudio();
+                this.triggerHaptic('medium');
+                this.shatterAnimation(() => {
+                    document.querySelectorAll('.cell').forEach(c => {
+                        c.style.opacity = '1';
+                        c.style.backgroundColor = '';
+                        c.style.removeProperty('--cell-color');
+                        c.classList.remove('filled', 'clearing', 'preview');
+                    });
+                    this.grid = Array(this.size).fill(null).map(() => Array(this.size).fill(null));
+                    this.score = 0;
+                    this.pieces = [];
+                    document.getElementById('score').textContent = '0';
+                    document.getElementById('gameOver').classList.remove('show');
+                    this.createGrid();
+                    this.generatePieces();
+                    this.updateGridRect();
+                });
+            }
+        }
+
+        const game = new SeonnBlast();
+    </script>
+</body>
+</html>
