@@ -164,7 +164,6 @@
             padding: 12px;
             flex-shrink: 0;
             box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-            position: relative;
         }
 
         .grid {
@@ -175,7 +174,6 @@
             background: rgba(0,0,0,0.15);
             border-radius: 12px;
             padding: 3px;
-            position: relative;
         }
 
         .cell {
@@ -219,18 +217,8 @@
         }
 
         .cell.preview {
-            opacity: 0.85;
-            transform: scale(0.92);
-            box-shadow: 0 0 15px currentColor;
-        }
-
-        .cell.preview::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, rgba(255,255,255,0.5) 0%, transparent 50%);
-            border-radius: 10px;
-            pointer-events: none;
+            opacity: 0.7;
+            transform: scale(0.95);
         }
 
         .pieces-wrapper {
@@ -350,58 +338,52 @@
             position: fixed;
             pointer-events: none;
             z-index: 1000;
-            opacity: 0.98;
-            transform: scale(1.08);
-            filter: drop-shadow(0 12px 24px rgba(0,0,0,0.5));
-            transition: none;
+            opacity: 0.95;
+            transform: scale(1.05);
+            filter: drop-shadow(0 8px 16px rgba(0,0,0,0.4));
         }
 
         .dragged-piece .piece-cell {
             width: 24px;
             height: 24px;
-            box-shadow: 
-                inset 0 2px 0 rgba(255,255,255,0.5),
-                inset 0 -2px 0 rgba(0,0,0,0.3),
-                0 4px 8px rgba(0,0,0,0.3);
         }
 
         .score-popup {
             position: fixed;
-            font-size: 28px;
-            font-weight: 900;
+            font-size: 24px;
+            font-weight: 800;
             color: #fbbf24;
             pointer-events: none;
             z-index: 100;
             animation: scorePopup 1s ease forwards;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.3), 0 0 20px rgba(251, 191, 36, 0.5);
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
 
         @keyframes scorePopup {
             0% { transform: translate(-50%, 0) scale(0.5); opacity: 0; }
-            20% { transform: translate(-50%, -30px) scale(1.3); opacity: 1; }
-            100% { transform: translate(-50%, -80px) scale(1); opacity: 0; }
+            20% { transform: translate(-50%, -20px) scale(1.2); opacity: 1; }
+            100% { transform: translate(-50%, -50px) scale(1); opacity: 0; }
         }
 
         .combo {
             position: fixed;
-            font-size: 42px;
+            font-size: 36px;
             font-weight: 900;
             color: white;
             pointer-events: none;
             z-index: 100;
-            animation: comboAnim 1.5s ease forwards;
+            animation: comboAnim 1.2s ease forwards;
             left: 50%;
             top: 40%;
             transform: translateX(-50%);
-            text-shadow: 0 0 40px currentColor, 0 4px 8px rgba(0,0,0,0.3);
+            text-shadow: 0 0 30px currentColor, 0 2px 4px rgba(0,0,0,0.3);
             white-space: nowrap;
         }
 
         @keyframes comboAnim {
-            0% { transform: translateX(-50%) scale(0.2); opacity: 0; filter: blur(20px); }
-            15% { transform: translateX(-50%) scale(1.4); opacity: 1; filter: blur(0); }
-            30% { transform: translateX(-50%) scale(1.1); }
-            100% { transform: translateX(-50%) scale(1) translateY(-80px); opacity: 0; filter: blur(10px); }
+            0% { transform: translateX(-50%) scale(0.3); opacity: 0; filter: blur(10px); }
+            20% { transform: translateX(-50%) scale(1.3); opacity: 1; filter: blur(0); }
+            100% { transform: translateX(-50%) scale(1) translateY(-50px); opacity: 0; filter: blur(5px); }
         }
 
         .modal {
@@ -488,13 +470,13 @@
         }
 
         .clearing {
-            animation: clearLine 0.6s ease forwards;
+            animation: clearLine 0.5s ease forwards;
         }
 
         @keyframes clearLine {
-            0% { transform: scale(1) rotate(0deg); opacity: 1; }
-            50% { transform: scale(1.2) rotate(5deg); opacity: 0.8; }
-            100% { transform: scale(0) rotate(0deg); opacity: 0; }
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+            100% { transform: scale(0); opacity: 0; }
         }
 
         .shatter-piece {
@@ -598,34 +580,13 @@
                 this.score = 0;
                 this.best = parseInt(localStorage.getItem('seonnBlastBest')) || 0;
                 this.pieces = [];
-                this.colors = ['#ef4444', '#eab308', '#22c55e', '#a855f7', '#3b82f6', '#f97316', '#ec4899', '#14b8a6'];
-                
-                // Extended shapes library
+                this.colors = ['#ef4444', '#eab308', '#22c55e', '#a855f7', '#3b82f6'];
                 this.shapes = [
-                    // Monominoes
-                    [[1]],
-                    // Dominoes
-                    [[1,1]], [[1],[1]],
-                    // Trominoes
-                    [[1,1,1]], [[1],[1],[1]],
-                    [[1,1],[1,0]], [[1,1],[0,1]], [[1,0],[1,1]], [[0,1],[1,1]],
-                    // Tetrominoes
-                    [[1,1],[1,1]],
-                    [[1,1,1,1]], [[1],[1],[1],[1]],
-                    [[1,1,1],[0,1,0]], [[1,1,1],[1,0,0]], [[1,1,1],[0,0,1]],
-                    [[0,1,1],[1,1,0]], [[1,1,0],[0,1,1]],
-                    [[1,0,0],[1,1,1]], [[0,0,1],[1,1,1]],
-                    [[1,1],[0,1],[0,1]], [[1,1],[1,0],[1,0]],
-                    // Pentominoes
-                    [[1,1,1],[1,0,0],[1,0,0]], [[1,1,1],[0,0,1],[0,0,1]],
-                    [[1,1,1,1],[0,1,0,0]], [[1,1,1,1],[0,0,1,0]],
-                    [[1,1,0],[0,1,1],[0,0,1]], [[0,1,1],[1,1,0],[1,0,0]],
-                    [[1,0,0],[1,1,1],[0,0,1]], [[0,0,1],[1,1,1],[1,0,0]],
-                    [[1,1,1],[1,0,1]], [[1,0,1],[1,1,1]],
-                    [[0,1,0],[1,1,1],[0,1,0]],
-                    [[1,1,1,1,1]], [[1],[1],[1],[1],[1]]
+                    [[1]], [[1,1]], [[1],[1]], [[1,1,1]], [[1],[1],[1]],
+                    [[1,1],[1,1]], [[1,1,1],[0,1,0]], [[1,0],[1,1]],
+                    [[0,1],[1,1]], [[1,1,0],[0,1,1]], [[0,1,1],[1,1,0]],
+                    [[1,1,1,1]], [[1],[1],[1],[1]]
                 ];
-                
                 this.singleLineTexts = ['NICE!', 'COOL!', 'SWEET!', 'GOOD!', 'GREAT!'];
                 this.dragged = null;
                 this.previewCells = [];
@@ -634,11 +595,8 @@
                 this.masterGain = null;
                 this.audioInitialized = false;
                 this.lastDragTime = 0;
-                this.dragThrottle = 8; // Smoother tracking
-                this.isAnimating = false;
-                
-                // Pre-calculated cell positions for smooth preview
-                this.cellRects = null;
+                this.dragThrottle = 16;
+                this.isCheckingGameOver = false;
                 
                 this.init();
             }
@@ -653,18 +611,22 @@
                         this.audioContext.resume();
                     }
                     this.masterGain = this.audioContext.createGain();
-                    this.masterGain.gain.value = 1.2;
-                    
-                    // High quality compressor
+                    this.masterGain.gain.value = 2.0;
                     const compressor = this.audioContext.createDynamicsCompressor();
-                    compressor.threshold.value = -24;
-                    compressor.knee.value = 30;
-                    compressor.ratio.value = 12;
-                    compressor.attack.value = 0.003;
-                    compressor.release.value = 0.25;
-                    
+                    compressor.threshold.value = -12;
+                    compressor.knee.value = 20;
+                    compressor.ratio.value = 8;
+                    compressor.attack.value = 0.001;
+                    compressor.release.value = 0.1;
+                    const limiter = this.audioContext.createDynamicsCompressor();
+                    limiter.threshold.value = -3;
+                    limiter.knee.value = 0;
+                    limiter.ratio.value = 20;
+                    limiter.attack.value = 0.001;
+                    limiter.release.value = 0.01;
                     this.masterGain.connect(compressor);
-                    compressor.connect(this.audioContext.destination);
+                    compressor.connect(limiter);
+                    limiter.connect(this.audioContext.destination);
                     this.audioInitialized = true;
                 } catch(e) {
                     console.log('Audio init error:', e);
@@ -679,221 +641,13 @@
                 }
             }
 
-            // Satisfying placement sound with "pop" and shimmer
-            playPlaceSound() {
-                const t = this.audioContext.currentTime;
-                
-                // Layer 1: Deep satisfying thud
-                const osc1 = this.audioContext.createOscillator();
-                const gain1 = this.audioContext.createGain();
-                const filter1 = this.audioContext.createBiquadFilter();
-                
-                osc1.type = 'sine';
-                osc1.frequency.setValueAtTime(200, t);
-                osc1.frequency.exponentialRampToValueAtTime(80, t + 0.15);
-                
-                filter1.type = 'lowpass';
-                filter1.frequency.setValueAtTime(1000, t);
-                filter1.frequency.exponentialRampToValueAtTime(200, t + 0.15);
-                
-                gain1.gain.setValueAtTime(0, t);
-                gain1.gain.linearRampToValueAtTime(0.8, t + 0.02);
-                gain1.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
-                
-                osc1.connect(filter1);
-                filter1.connect(gain1);
-                gain1.connect(this.masterGain);
-                
-                osc1.start(t);
-                osc1.stop(t + 0.2);
-                
-                // Layer 2: High sparkle "ping"
-                const osc2 = this.audioContext.createOscillator();
-                const gain2 = this.audioContext.createGain();
-                
-                osc2.type = 'sine';
-                osc2.frequency.setValueAtTime(1200, t);
-                osc2.frequency.exponentialRampToValueAtTime(2400, t + 0.1);
-                
-                gain2.gain.setValueAtTime(0, t);
-                gain2.gain.linearRampToValueAtTime(0.4, t + 0.01);
-                gain2.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
-                
-                osc2.connect(gain2);
-                gain2.connect(this.masterGain);
-                
-                osc2.start(t);
-                osc2.stop(t + 0.3);
-                
-                // Layer 3: Mid confirmation tone
-                const osc3 = this.audioContext.createOscillator();
-                const gain3 = this.audioContext.createGain();
-                
-                osc3.type = 'triangle';
-                osc3.frequency.setValueAtTime(600, t);
-                osc3.frequency.setValueAtTime(800, t + 0.05);
-                
-                gain3.gain.setValueAtTime(0, t);
-                gain3.gain.linearRampToValueAtTime(0.3, t + 0.03);
-                gain3.gain.exponentialRampToValueAtTime(0.01, t + 0.25);
-                
-                osc3.connect(gain3);
-                gain3.connect(this.masterGain);
-                
-                osc3.start(t);
-                osc3.stop(t + 0.25);
-            }
-
-            // Satisfying clear sound with ascending arpeggio
-            playClearSound() {
-                const t = this.audioContext.currentTime;
-                const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51];
-                const types = ['sine', 'triangle', 'sine', 'triangle', 'sine'];
-                
-                notes.forEach((freq, i) => {
-                    const osc = this.audioContext.createOscillator();
-                    const gain = this.audioContext.createGain();
-                    
-                    osc.type = types[i];
-                    osc.frequency.value = freq;
-                    
-                    gain.gain.setValueAtTime(0, t + i * 0.05);
-                    gain.gain.linearRampToValueAtTime(0.5, t + i * 0.05 + 0.02);
-                    gain.gain.exponentialRampToValueAtTime(0.01, t + i * 0.05 + 0.25);
-                    
-                    osc.connect(gain);
-                    gain.connect(this.masterGain);
-                    
-                    osc.start(t + i * 0.05);
-                    osc.stop(t + i * 0.05 + 0.25);
-                });
-                
-                // Harmony layer
-                const harmony = [659.25, 783.99, 987.77, 1318.51];
-                harmony.forEach((freq, i) => {
-                    const osc = this.audioContext.createOscillator();
-                    const gain = this.audioContext.createGain();
-                    
-                    osc.type = 'sine';
-                    osc.frequency.value = freq;
-                    
-                    gain.gain.setValueAtTime(0, t + i * 0.06 + 0.1);
-                    gain.gain.linearRampToValueAtTime(0.3, t + i * 0.06 + 0.12);
-                    gain.gain.exponentialRampToValueAtTime(0.01, t + i * 0.06 + 0.4);
-                    
-                    osc.connect(gain);
-                    gain.connect(this.masterGain);
-                    
-                    osc.start(t + i * 0.06 + 0.1);
-                    osc.stop(t + i * 0.06 + 0.4);
-                });
-            }
-
-            // Epic combo sound with chord progression
-            playComboSound() {
-                const t = this.audioContext.currentTime;
-                
-                // Power chord
-                const chord = [261.63, 329.63, 392.00, 523.25, 659.25];
-                chord.forEach((freq, i) => {
-                    const osc = this.audioContext.createOscillator();
-                    const gain = this.audioContext.createGain();
-                    const filter = this.audioContext.createBiquadFilter();
-                    
-                    osc.type = 'sawtooth';
-                    osc.frequency.value = freq;
-                    
-                    filter.type = 'lowpass';
-                    filter.frequency.setValueAtTime(2000, t + i * 0.03);
-                    filter.frequency.linearRampToValueAtTime(6000, t + i * 0.03 + 0.1);
-                    filter.frequency.exponentialRampToValueAtTime(1000, t + i * 0.03 + 0.6);
-                    
-                    gain.gain.setValueAtTime(0, t + i * 0.03);
-                    gain.gain.linearRampToValueAtTime(0.25, t + i * 0.03 + 0.05);
-                    gain.gain.exponentialRampToValueAtTime(0.01, t + i * 0.03 + 0.7);
-                    
-                    osc.connect(filter);
-                    filter.connect(gain);
-                    gain.connect(this.masterGain);
-                    
-                    osc.start(t + i * 0.03);
-                    osc.stop(t + i * 0.03 + 0.7);
-                });
-                
-                // Impact
-                const oscImpact = this.audioContext.createOscillator();
-                const gainImpact = this.audioContext.createGain();
-                
-                oscImpact.frequency.setValueAtTime(150, t);
-                oscImpact.frequency.exponentialRampToValueAtTime(40, t + 0.4);
-                
-                gainImpact.gain.setValueAtTime(0.9, t);
-                gainImpact.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
-                
-                oscImpact.connect(gainImpact);
-                gainImpact.connect(this.masterGain);
-                
-                oscImpact.start(t);
-                oscImpact.stop(t + 0.4);
-            }
-
-            // Dramatic defeat sound
-            playDefeatSound() {
-                const t = this.audioContext.currentTime;
-                
-                const osc = this.audioContext.createOscillator();
-                const gain = this.audioContext.createGain();
-                const filter = this.audioContext.createBiquadFilter();
-                
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(300, t);
-                osc.frequency.exponentialRampToValueAtTime(50, t + 1.2);
-                
-                filter.type = 'lowpass';
-                filter.frequency.setValueAtTime(2000, t);
-                filter.frequency.exponentialRampToValueAtTime(100, t + 1.2);
-                
-                gain.gain.setValueAtTime(0.8, t);
-                gain.gain.linearRampToValueAtTime(0.6, t + 0.3);
-                gain.gain.exponentialRampToValueAtTime(0.01, t + 1.2);
-                
-                osc.connect(filter);
-                filter.connect(gain);
-                gain.connect(this.masterGain);
-                
-                osc.start(t);
-                osc.stop(t + 1.2);
-            }
-
-            // Soft drag sound
-            playDragSound() {
-                const t = this.audioContext.currentTime;
-                
-                const osc = this.audioContext.createOscillator();
-                const gain = this.audioContext.createGain();
-                
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(800, t);
-                osc.frequency.exponentialRampToValueAtTime(400, t + 0.08);
-                
-                gain.gain.setValueAtTime(0.3, t);
-                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.08);
-                
-                osc.connect(gain);
-                gain.connect(this.masterGain);
-                
-                osc.start(t);
-                osc.stop(t + 0.08);
-            }
-
             playSound(type) {
                 if (!this.audioEnabled || !this.audioContext) return;
                 this.unlockAudio();
                 const now = Date.now();
-                if (this.lastSoundTime && now - this.lastSoundTime < 30 && type === this.lastSoundType) return;
+                if (this.lastSoundTime && now - this.lastSoundTime < 50 && type === this.lastSoundType) return;
                 this.lastSoundTime = now;
                 this.lastSoundType = type;
-                
                 try {
                     switch(type) {
                         case 'place': this.playPlaceSound(); break;
@@ -907,14 +661,158 @@
                 }
             }
 
+            playPlaceSound() {
+                const t = this.audioContext.currentTime;
+                const osc1 = this.audioContext.createOscillator();
+                const gain1 = this.audioContext.createGain();
+                osc1.connect(gain1);
+                gain1.connect(this.masterGain);
+                osc1.frequency.setValueAtTime(600, t);
+                osc1.frequency.exponentialRampToValueAtTime(150, t + 0.12);
+                gain1.gain.setValueAtTime(1.0, t);
+                gain1.gain.exponentialRampToValueAtTime(0.01, t + 0.12);
+                osc1.start(t);
+                osc1.stop(t + 0.12);
+                const osc2 = this.audioContext.createOscillator();
+                const gain2 = this.audioContext.createGain();
+                osc2.connect(gain2);
+                gain2.connect(this.masterGain);
+                osc2.type = 'sine';
+                osc2.frequency.setValueAtTime(1800, t);
+                osc2.frequency.exponentialRampToValueAtTime(900, t + 0.08);
+                gain2.gain.setValueAtTime(0.8, t);
+                gain2.gain.exponentialRampToValueAtTime(0.01, t + 0.08);
+                osc2.start(t);
+                osc2.stop(t + 0.08);
+                const osc3 = this.audioContext.createOscillator();
+                const gain3 = this.audioContext.createGain();
+                osc3.connect(gain3);
+                gain3.connect(this.masterGain);
+                osc3.type = 'sine';
+                osc3.frequency.setValueAtTime(150, t);
+                osc3.frequency.exponentialRampToValueAtTime(40, t + 0.15);
+                gain3.gain.setValueAtTime(0.9, t);
+                gain3.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
+                osc3.start(t);
+                osc3.stop(t + 0.15);
+            }
+
+            playClearSound() {
+                const t = this.audioContext.currentTime;
+                const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98, 2093.00];
+                notes.forEach((freq, i) => {
+                    const osc = this.audioContext.createOscillator();
+                    const gain = this.audioContext.createGain();
+                    osc.connect(gain);
+                    gain.connect(this.masterGain);
+                    osc.type = i % 2 === 0 ? 'sine' : 'triangle';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.7, t + i * 0.04);
+                    gain.gain.exponentialRampToValueAtTime(0.01, t + i * 0.04 + 0.2);
+                    osc.start(t + i * 0.04);
+                    osc.stop(t + i * 0.04 + 0.2);
+                    if (i === notes.length - 1) {
+                        const oscHigh = this.audioContext.createOscillator();
+                        const gainHigh = this.audioContext.createGain();
+                        oscHigh.connect(gainHigh);
+                        gainHigh.connect(this.masterGain);
+                        oscHigh.type = 'square';
+                        oscHigh.frequency.value = freq;
+                        gainHigh.gain.setValueAtTime(0.3, t + i * 0.04);
+                        gainHigh.gain.exponentialRampToValueAtTime(0.01, t + i * 0.04 + 0.15);
+                        oscHigh.start(t + i * 0.04);
+                        oscHigh.stop(t + i * 0.04 + 0.15);
+                    }
+                });
+            }
+
+            playComboSound() {
+                const t = this.audioContext.currentTime;
+                const chord = [
+                    {f: 523.25, t: 0}, {f: 659.25, t: 0.015}, {f: 783.99, t: 0.03},
+                    {f: 1046.50, t: 0.045}, {f: 1318.51, t: 0.06}, {f: 1567.98, t: 0.075}
+                ];
+                chord.forEach(note => {
+                    const osc = this.audioContext.createOscillator();
+                    const gain = this.audioContext.createGain();
+                    osc.connect(gain);
+                    gain.connect(this.masterGain);
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(note.f, t + note.t);
+                    osc.frequency.exponentialRampToValueAtTime(note.f * 1.01, t + note.t + 0.4);
+                    const filter = this.audioContext.createBiquadFilter();
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(3000, t + note.t);
+                    filter.frequency.linearRampToValueAtTime(5000, t + note.t + 0.1);
+                    filter.frequency.exponentialRampToValueAtTime(1000, t + note.t + 0.4);
+                    osc.disconnect();
+                    osc.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(this.masterGain);
+                    gain.gain.setValueAtTime(0, t + note.t);
+                    gain.gain.linearRampToValueAtTime(0.6, t + note.t + 0.03);
+                    gain.gain.exponentialRampToValueAtTime(0.01, t + note.t + 0.5);
+                    osc.start(t + note.t);
+                    osc.stop(t + note.t + 0.5);
+                });
+                const oscDrum = this.audioContext.createOscillator();
+                const gainDrum = this.audioContext.createGain();
+                oscDrum.connect(gainDrum);
+                gainDrum.connect(this.masterGain);
+                oscDrum.frequency.setValueAtTime(200, t);
+                oscDrum.frequency.exponentialRampToValueAtTime(30, t + 0.35);
+                gainDrum.gain.setValueAtTime(1.2, t);
+                gainDrum.gain.exponentialRampToValueAtTime(0.01, t + 0.35);
+                oscDrum.start(t);
+                oscDrum.stop(t + 0.35);
+            }
+
+            playDefeatSound() {
+                const t = this.audioContext.currentTime;
+                const osc = this.audioContext.createOscillator();
+                const gain = this.audioContext.createGain();
+                osc.connect(gain);
+                gain.connect(this.masterGain);
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(400, t);
+                osc.frequency.exponentialRampToValueAtTime(60, t + 0.9);
+                const filter = this.audioContext.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(1200, t);
+                filter.frequency.exponentialRampToValueAtTime(80, t + 0.9);
+                osc.disconnect();
+                osc.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.masterGain);
+                gain.gain.setValueAtTime(0.9, t);
+                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.9);
+                osc.start(t);
+                osc.stop(t + 0.9);
+            }
+
+            playDragSound() {
+                const t = this.audioContext.currentTime;
+                const osc = this.audioContext.createOscillator();
+                const gain = this.audioContext.createGain();
+                osc.connect(gain);
+                gain.connect(this.masterGain);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1200, t);
+                osc.frequency.exponentialRampToValueAtTime(600, t + 0.04);
+                gain.gain.setValueAtTime(0.5, t);
+                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.04);
+                osc.start(t);
+                osc.stop(t + 0.04);
+            }
+
             speakCombo(text) {
                 if (!this.audioEnabled) return;
                 if ('speechSynthesis' in window) {
                     window.speechSynthesis.cancel();
                     const utterance = new SpeechSynthesisUtterance(text);
-                    utterance.rate = 1.2;
-                    utterance.pitch = 1.0;
-                    utterance.volume = 0.8;
+                    utterance.rate = 1.3;
+                    utterance.pitch = 1.1;
+                    utterance.volume = 1.0;
                     const voices = window.speechSynthesis.getVoices();
                     if (voices.length > 0) {
                         const preferredVoice = voices.find(v => v.name.includes('Google US English')) ||
@@ -942,18 +840,10 @@
             init() {
                 document.getElementById('best').textContent = this.best;
                 this.createGrid();
-                this.calculateCellPositions(); // Pre-calculate
                 this.generatePieces();
-                
-                // Recalculate on resize
-                window.addEventListener('resize', () => {
-                    this.calculateCellPositions();
-                });
-                
                 if ('speechSynthesis' in window) {
                     window.speechSynthesis.getVoices();
                 }
-                
                 const unlockHandler = () => {
                     this.unlockAudio();
                     document.removeEventListener('touchstart', unlockHandler);
@@ -961,27 +851,6 @@
                 };
                 document.addEventListener('touchstart', unlockHandler, { once: true });
                 document.addEventListener('click', unlockHandler, { once: true });
-            }
-
-            calculateCellPositions() {
-                const gridEl = document.getElementById('grid');
-                const rect = gridEl.getBoundingClientRect();
-                const cellSize = rect.width / this.size;
-                
-                this.cellRects = [];
-                for (let r = 0; r < this.size; r++) {
-                    for (let c = 0; c < this.size; c++) {
-                        this.cellRects.push({
-                            r, c,
-                            left: rect.left + c * cellSize,
-                            top: rect.top + r * cellSize,
-                            right: rect.left + (c + 1) * cellSize,
-                            bottom: rect.top + (r + 1) * cellSize,
-                            centerX: rect.left + c * cellSize + cellSize / 2,
-                            centerY: rect.top + r * cellSize + cellSize / 2
-                        });
-                    }
-                }
             }
 
             createGrid() {
@@ -1000,24 +869,7 @@
 
             generatePieces() {
                 while (this.pieces.length < 3) {
-                    // Weight random: smaller pieces more common
-                    const rand = Math.random();
-                    let shapeIndex;
-                    if (rand < 0.4) {
-                        // Monominoes and dominoes (40%)
-                        shapeIndex = Math.floor(Math.random() * 3);
-                    } else if (rand < 0.7) {
-                        // Trominoes (30%)
-                        shapeIndex = 3 + Math.floor(Math.random() * 5);
-                    } else if (rand < 0.9) {
-                        // Tetrominoes (20%)
-                        shapeIndex = 8 + Math.floor(Math.random() * 8);
-                    } else {
-                        // Pentominoes (10%)
-                        shapeIndex = 16 + Math.floor(Math.random() * (this.shapes.length - 16));
-                    }
-                    
-                    const shape = this.shapes[shapeIndex] || this.shapes[0];
+                    const shape = this.shapes[Math.floor(Math.random() * this.shapes.length)];
                     const color = this.colors[Math.floor(Math.random() * this.colors.length)];
                     this.pieces.push({ shape, color });
                 }
@@ -1038,11 +890,9 @@
                 const el = document.createElement('div');
                 el.className = 'piece';
                 el.dataset.idx = index;
-                
                 const rows = piece.shape.length;
                 const cols = piece.shape[0].length;
                 el.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-                
                 for (let r = 0; r < rows; r++) {
                     for (let c = 0; c < cols; c++) {
                         const cell = document.createElement('div');
@@ -1060,138 +910,83 @@
                         el.appendChild(cell);
                     }
                 }
-                
                 const startDrag = (e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     this.handleDragStart(e, index);
                 };
-                
                 el.addEventListener('touchstart', startDrag, { passive: false, capture: true });
                 el.addEventListener('mousedown', startDrag, { capture: true });
-                
                 return el;
             }
 
             handleDragStart(e, index) {
-                if (this.isAnimating) return;
-                
                 this.unlockAudio();
                 this.playSound('drag');
-                
                 const touch = e.touches ? e.touches[0] : e;
                 const piece = this.pieces[index];
-                
                 const rect = e.currentTarget.getBoundingClientRect();
-                
-                // Calculate offset from touch point to piece corner
-                const offsetX = touch.clientX - rect.left;
-                const offsetY = touch.clientY - rect.top;
-                
                 const dragEl = this.createPieceElement(piece, index, false);
                 dragEl.classList.add('dragged-piece');
-                
-                // Center the piece on the touch point
-                const pieceWidth = rect.width;
-                const pieceHeight = rect.height;
-                const centerOffsetX = pieceWidth / 2 - offsetX;
-                const centerOffsetY = pieceHeight / 2 - offsetY;
-                
-                dragEl.style.left = (rect.left + centerOffsetX) + 'px';
-                dragEl.style.top = (rect.top + centerOffsetY) + 'px';
+                dragEl.style.left = rect.left + 'px';
+                dragEl.style.top = rect.top + 'px';
                 dragEl.style.margin = '0';
-                
                 document.body.appendChild(dragEl);
-                
                 const original = document.querySelector(`[data-idx="${index}"]`);
                 if (original) original.classList.add('hidden');
-                
                 this.dragged = {
                     el: dragEl,
                     piece: piece,
                     index: index,
                     startX: touch.clientX,
                     startY: touch.clientY,
-                    offsetX: centerOffsetX,
-                    offsetY: centerOffsetY,
-                    currentX: rect.left + centerOffsetX,
-                    currentY: rect.top + centerOffsetY
+                    origX: rect.left,
+                    origY: rect.top,
+                    currentX: rect.left,
+                    currentY: rect.top
                 };
-                
-                // Immediate first preview
-                this.updatePreview(touch.clientX, touch.clientY);
-                
-                // Smooth RAF-based movement
-                this.targetX = this.dragged.currentX;
-                this.targetY = this.dragged.currentY;
-                
                 this.moveHandler = (ev) => {
                     ev.preventDefault();
-                    const touch = ev.touches ? ev.touches[0] : ev;
-                    this.targetX = touch.clientX + this.dragged.offsetX;
-                    this.targetY = touch.clientY + this.dragged.offsetY;
-                    
-                    // Use RAF for smooth visual, but check preview immediately
-                    requestAnimationFrame(() => {
-                        if (this.dragged) {
-                            this.dragged.el.style.left = this.targetX + 'px';
-                            this.dragged.el.style.top = this.targetY + 'px';
-                        }
-                    });
-                    
-                    // Throttled preview update
                     const now = Date.now();
-                    if (now - this.lastDragTime >= this.dragThrottle) {
-                        this.lastDragTime = now;
-                        this.updatePreview(touch.clientX, touch.clientY);
-                    }
+                    if (now - this.lastDragTime < this.dragThrottle) return;
+                    this.lastDragTime = now;
+                    this.handleDragMove(ev);
                 };
-                
                 this.endHandler = (ev) => this.handleDragEnd(ev);
-                
                 document.addEventListener('touchmove', this.moveHandler, { passive: false, capture: true });
                 document.addEventListener('mousemove', this.moveHandler, { capture: true });
                 document.addEventListener('touchend', this.endHandler, { once: true, capture: true });
                 document.addEventListener('mouseup', this.endHandler, { once: true, capture: true });
             }
 
+            handleDragMove(e) {
+                if (!this.dragged) return;
+                const touch = e.touches ? e.touches[0] : e;
+                const dx = touch.clientX - this.dragged.startX;
+                const dy = touch.clientY - this.dragged.startY;
+                this.dragged.el.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(1.05)`;
+                requestAnimationFrame(() => {
+                    this.updatePreview(touch.clientX, touch.clientY);
+                });
+            }
+
             updatePreview(x, y) {
-                // Clear previous preview immediately
                 this.clearPreview();
-                
-                if (!this.cellRects) {
-                    this.calculateCellPositions();
-                }
-                
-                // Find which cell the center of the piece is over
-                const centerCell = this.cellRects.find(cell => 
-                    x >= cell.left && x < cell.right &&
-                    y >= cell.top && y < cell.bottom
-                );
-                
-                if (!centerCell) return;
-                
-                const row = centerCell.r;
-                const col = centerCell.c;
-                const shape = this.dragged.piece.shape;
-                
-                // Calculate top-left of the piece based on center
-                const shapeRows = shape.length;
-                const shapeCols = shape[0].length;
-                const startRow = row - Math.floor(shapeRows / 2);
-                const startCol = col - Math.floor(shapeCols / 2);
-                
-                // Check if placement is valid
-                if (this.canPlace(startRow, startCol, shape)) {
-                    for (let i = 0; i < shape.length; i++) {
-                        for (let j = 0; j < shape[i].length; j++) {
-                            if (shape[i][j]) {
-                                const cell = document.querySelector(`[data-r="${startRow + i}"][data-c="${startCol + j}"]`);
-                                if (cell && !this.grid[startRow + i][startCol + j]) {
-                                    cell.classList.add('preview');
-                                    cell.style.backgroundColor = this.dragged.piece.color;
-                                    cell.style.boxShadow = `0 0 20px ${this.dragged.piece.color}80`;
-                                    this.previewCells.push(cell);
+                const gridEl = document.getElementById('grid');
+                const rect = gridEl.getBoundingClientRect();
+                if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+                    const col = Math.floor((x - rect.left) / (rect.width / this.size));
+                    const row = Math.floor((y - rect.top) / (rect.height / this.size));
+                    if (this.canPlace(row, col, this.dragged.piece.shape)) {
+                        for (let i = 0; i < this.dragged.piece.shape.length; i++) {
+                            for (let j = 0; j < this.dragged.piece.shape[i].length; j++) {
+                                if (this.dragged.piece.shape[i][j]) {
+                                    const cell = document.querySelector(`[data-r="${row + i}"][data-c="${col + j}"]`);
+                                    if (cell && !this.grid[row + i][col + j]) {
+                                        cell.classList.add('preview');
+                                        cell.style.backgroundColor = this.dragged.piece.color;
+                                        this.previewCells.push(cell);
+                                    }
                                 }
                             }
                         }
@@ -1202,55 +997,36 @@
             clearPreview() {
                 this.previewCells.forEach(cell => {
                     cell.classList.remove('preview');
-                    cell.style.backgroundColor = '';
-                    cell.style.boxShadow = '';
+                    if (!cell.classList.contains('filled')) {
+                        cell.style.backgroundColor = '';
+                    }
                 });
                 this.previewCells = [];
             }
 
             handleDragEnd(e) {
+                if (!this.dragged) return;
                 document.removeEventListener('touchmove', this.moveHandler, { capture: true });
                 document.removeEventListener('mousemove', this.moveHandler, { capture: true });
-                
-                if (!this.dragged) return;
-                
                 const touch = e.changedTouches ? e.changedTouches[0] : e;
-                const x = touch.clientX;
-                const y = touch.clientY;
-                
-                // Find drop position
-                if (!this.cellRects) {
-                    this.calculateCellPositions();
-                }
-                
-                const centerCell = this.cellRects.find(cell => 
-                    x >= cell.left && x < cell.right &&
-                    y >= cell.top && y < cell.bottom
-                );
-                
+                const gridEl = document.getElementById('grid');
+                const rect = gridEl.getBoundingClientRect();
                 let placed = false;
-                
-                if (centerCell) {
-                    const shape = this.dragged.piece.shape;
-                    const shapeRows = shape.length;
-                    const shapeCols = shape[0].length;
-                    const startRow = centerCell.r - Math.floor(shapeRows / 2);
-                    const startCol = centerCell.c - Math.floor(shapeCols / 2);
-                    
-                    if (this.canPlace(startRow, startCol, shape)) {
-                        this.placePiece(startRow, startCol, x, y);
+                if (touch.clientX >= rect.left && touch.clientX <= rect.right && 
+                    touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+                    const col = Math.floor((touch.clientX - rect.left) / (rect.width / this.size));
+                    const row = Math.floor((touch.clientY - rect.top) / (rect.height / this.size));
+                    if (this.canPlace(row, col, this.dragged.piece.shape)) {
+                        this.placePiece(row, col, touch.clientX, touch.clientY);
                         placed = true;
                     }
                 }
-                
                 this.clearPreview();
                 this.dragged.el.remove();
-                
                 if (!placed) {
                     const original = document.querySelector(`[data-idx="${this.dragged.index}"]`);
                     if (original) original.classList.remove('hidden');
                 }
-                
                 this.dragged = null;
             }
 
@@ -1270,7 +1046,6 @@
 
             placePiece(row, col, x, y) {
                 const piece = this.dragged.piece;
-                
                 for (let i = 0; i < piece.shape.length; i++) {
                     for (let j = 0; j < piece.shape[i].length; j++) {
                         if (piece.shape[i][j]) {
@@ -1278,32 +1053,24 @@
                             const cell = document.querySelector(`[data-r="${row + i}"][data-c="${col + j}"]`);
                             cell.style.backgroundColor = piece.color;
                             cell.classList.add('filled');
-                            
-                            // Pop animation
-                            cell.style.transform = 'scale(0)';
-                            setTimeout(() => {
-                                cell.style.transform = 'scale(1)';
-                            }, 10);
                         }
                     }
                 }
-                
                 this.playSound('place');
-                
                 const cells = piece.shape.flat().filter(Boolean).length;
                 const points = cells * 10;
                 this.score += points;
                 this.updateScore();
-                
                 this.showScorePopup(points, x, y);
-                
                 this.pieces.splice(this.dragged.index, 1);
+                
+                // Render ulang pieces yang tersisa
                 this.renderPieces();
                 
-                this.isAnimating = true;
+                // Cek line clear
                 setTimeout(() => {
                     this.checkLines();
-                }, 150);
+                }, 100);
             }
 
             showScorePopup(points, x, y) {
@@ -1327,7 +1094,6 @@
 
             checkLines() {
                 const rowsToClear = [], colsToClear = [];
-                
                 for (let i = 0; i < this.size; i++) {
                     if (this.grid[i].every(cell => cell !== null)) rowsToClear.push(i);
                 }
@@ -1336,13 +1102,12 @@
                 }
                 
                 if (rowsToClear.length === 0 && colsToClear.length === 0) {
-                    this.isAnimating = false;
+                    // Tidak ada yang di-clear, cek apakah perlu generate pieces baru
                     this.checkAndGeneratePieces();
                     return;
                 }
                 
                 const total = rowsToClear.length + colsToClear.length;
-                
                 let text;
                 if (total === 1) {
                     text = this.singleLineTexts[Math.floor(Math.random() * this.singleLineTexts.length)];
@@ -1354,26 +1119,19 @@
                     text = 'EXCELLENT!';
                 } else if (total === 5) {
                     text = 'AMAZING!';
-                } else if (total >= 6 && total <= 7) {
-                    text = 'INCREDIBLE!';
                 } else {
                     text = 'PERFECT!';
                 }
-                
                 this.showCombo(text);
-                
                 if (total >= 2) {
                     this.playSound('combo');
                 } else {
                     this.playSound('clear');
                 }
-                
                 setTimeout(() => this.speakCombo(text), 100);
-                
-                const bonus = total > 1 ? total * 100 : 0;
-                this.score += total * 150 + bonus;
+                const bonus = total > 1 ? total * 50 : 0;
+                this.score += total * 100 + bonus;
                 this.updateScore();
-                
                 const toClear = new Set();
                 rowsToClear.forEach(r => {
                     for (let c = 0; c < this.size; c++) toClear.add(`${r},${c}`);
@@ -1381,13 +1139,12 @@
                 colsToClear.forEach(c => {
                     for (let r = 0; r < this.size; r++) toClear.add(`${r},${c}`);
                 });
-                
                 toClear.forEach(key => {
                     const [r, c] = key.split(',').map(Number);
-                    const cell = document.querySelector(`[data-r="${r}"][data-c="${c}"]`);
-                    cell.classList.add('clearing');
+                    document.querySelector(`[data-r="${r}"][data-c="${c}"]`).classList.add('clearing');
                 });
                 
+                // Tunggu animasi clear selesai, baru generate pieces dan cek game over
                 setTimeout(() => {
                     toClear.forEach(key => {
                         const [r, c] = key.split(',').map(Number);
@@ -1395,19 +1152,21 @@
                         const cell = document.querySelector(`[data-r="${r}"][data-c="${c}"]`);
                         cell.style.backgroundColor = '';
                         cell.classList.remove('filled', 'clearing');
-                        cell.style.transform = '';
                     });
                     
-                    this.isAnimating = false;
+                    // Setelah block pecah, generate pieces baru jika perlu
                     this.checkAndGeneratePieces();
-                }, 600);
+                    
+                }, 500);
             }
 
             checkAndGeneratePieces() {
+                // Generate pieces baru jika kosong
                 if (this.pieces.length === 0) {
                     this.generatePieces();
                 }
                 
+                // Cek game over setelah pieces siap
                 setTimeout(() => {
                     this.checkGameOver();
                 }, 100);
@@ -1420,24 +1179,26 @@
                 const colors = {
                     'NICE!': '#3b82f6', 'COOL!': '#06b6d4', 'SWEET!': '#ec4899', 
                     'GOOD!': '#22c55e', 'GREAT!': '#eab308', 'EXCELLENT!': '#f97316', 
-                    'AMAZING!': '#a855f7', 'INCREDIBLE!': '#f43f5e', 'PERFECT!': '#ef4444'
+                    'AMAZING!': '#a855f7', 'PERFECT!': '#ef4444'
                 };
                 el.style.color = colors[text] || '#3b82f6';
                 document.body.appendChild(el);
-                setTimeout(() => el.remove(), 1500);
+                setTimeout(() => el.remove(), 1200);
             }
 
             checkGameOver() {
+                // Cek apakah ada moves yang tersedia
                 for (const piece of this.pieces) {
                     for (let r = 0; r < this.size; r++) {
                         for (let c = 0; c < this.size; c++) {
                             if (this.canPlace(r, c, piece.shape)) {
-                                return;
+                                return; // Masih ada move, game lanjut
                             }
                         }
                     }
                 }
                 
+                // Tidak ada moves tersedia
                 if (this.pieces.length > 0) {
                     this.playSound('defeat');
                     this.shatterAnimation(() => {
@@ -1453,39 +1214,31 @@
                     if (callback) callback();
                     return;
                 }
-                
                 filledCells.forEach((cell, idx) => {
                     setTimeout(() => {
                         const rect = cell.getBoundingClientRect();
                         const color = cell.style.backgroundColor;
-                        
-                        for (let i = 0; i < 6; i++) {
+                        for (let i = 0; i < 4; i++) {
                             const fragment = document.createElement('div');
                             fragment.className = 'shatter-piece';
-                            const angle = (i / 6) * Math.PI * 2;
-                            const distance = 100 + Math.random() * 100;
-                            
-                            fragment.style.left = rect.left + rect.width / 2 + 'px';
-                            fragment.style.top = rect.top + rect.height / 2 + 'px';
-                            fragment.style.width = (rect.width / 2) + 'px';
-                            fragment.style.height = (rect.height / 2) + 'px';
+                            fragment.style.left = rect.left + (i % 2) * rect.width / 2 + 'px';
+                            fragment.style.top = rect.top + Math.floor(i / 2) * rect.height / 2 + 'px';
+                            fragment.style.width = rect.width / 2 + 'px';
+                            fragment.style.height = rect.height / 2 + 'px';
                             fragment.style.backgroundColor = color;
                             fragment.style.borderRadius = '4px';
-                            fragment.style.setProperty('--tx', Math.cos(angle) * distance + 'px');
-                            fragment.style.setProperty('--ty', Math.sin(angle) * distance + 'px');
-                            fragment.style.setProperty('--rot', (Math.random() - 0.5) * 720 + 'deg');
-                            
+                            fragment.style.setProperty('--tx', (Math.random() - 0.5) * 150 + 'px');
+                            fragment.style.setProperty('--ty', (Math.random() - 0.5) * 150 + 'px');
+                            fragment.style.setProperty('--rot', (Math.random() - 0.5) * 360 + 'deg');
                             document.body.appendChild(fragment);
                             setTimeout(() => fragment.remove(), 800);
                         }
-                        
                         cell.style.opacity = '0';
-                    }, idx * 10);
+                    }, idx * 15);
                 });
-                
                 setTimeout(() => {
                     if (callback) callback();
-                }, filledCells.length * 10 + 500);
+                }, filledCells.length * 15 + 400);
             }
 
             hint() {
@@ -1498,15 +1251,13 @@
                                         if (piece.shape[i][j]) {
                                             const cell = document.querySelector(`[data-r="${r + i}"][data-c="${c + j}"]`);
                                             cell.style.backgroundColor = piece.color;
-                                            cell.style.opacity = '0.6';
-                                            cell.style.boxShadow = `0 0 30px ${piece.color}`;
+                                            cell.style.opacity = '0.5';
                                             setTimeout(() => {
                                                 if (!cell.classList.contains('filled')) {
                                                     cell.style.backgroundColor = '';
                                                     cell.style.opacity = '';
-                                                    cell.style.boxShadow = '';
                                                 }
-                                            }, 1500);
+                                            }, 1200);
                                         }
                                     }
                                 }
@@ -1520,18 +1271,13 @@
             restart() {
                 this.unlockAudio();
                 this.shatterAnimation(() => {
-                    document.querySelectorAll('.cell').forEach(c => {
-                        c.style.opacity = '1';
-                        c.style.transform = '';
-                    });
+                    document.querySelectorAll('.cell').forEach(c => c.style.opacity = '1');
                     this.grid = Array(this.size).fill(null).map(() => Array(this.size).fill(null));
                     this.score = 0;
                     this.pieces = [];
-                    this.isAnimating = false;
                     document.getElementById('score').textContent = '0';
                     document.getElementById('gameOver').classList.remove('show');
                     this.createGrid();
-                    this.calculateCellPositions();
                     this.generatePieces();
                 });
             }
